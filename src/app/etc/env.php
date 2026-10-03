@@ -131,7 +131,8 @@ return [
         'graphql_query_resolver_result' => 1,
         'full_page' => 1,
         'config_webservice' => 1,
-        'translate' => 1
+        'translate' => 1,
+        'magewire' => 1
     ],
     'downloadable_domains' => [
         'm2.test'
