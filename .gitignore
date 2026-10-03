@@ -4,3 +4,4 @@ src/pub/static/
 src/pub/media/
 src/vendor/
 compose.versions.yaml
+.idea
