@@ -3,19 +3,23 @@ declare(strict_types=1);
 
 use Magento\Catalog\Block\Product\View;
 use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
 
-/** @var View $block */
+/** @var Template|View $block */
 /** @var Escaper $escaper */
 
-$product = $block->getProduct();
-if (!$product) {
-    return;
+// On the product page the product is known server-side; on listing pages
+// the name and image are read from the submitted product item instead.
+$pageProduct = null;
+if ($block instanceof View && ($product = $block->getProduct())) {
+    $pageProduct = [
+        'name' => $product->getName(),
+        'image' => $block->getImage($product, 'product_page_image_small')->getImageUrl(),
+    ];
 }
-
-$image = $block->getImage($product, 'product_page_image_small');
 ?>
 
-<div x-data="initAddToCartPopup()"
+<div x-data="initAddToCartPopup(<?= $escaper->escapeHtmlAttr(json_encode($pageProduct)) ?>)"
      x-cloak>
     <div class="fixed inset-0 z-50 flex items-center justify-center w-full bg-black/50"
          x-show="open"
@@ -35,15 +39,15 @@ $image = $block->getImage($product, 'product_page_image_small');
             </div>
             <!-- Image and name -->
             <div class="flex justify-start items-center gap-2 w-full p-2">
-                <img class="w-20 h-20 object-contain"
-                     src="<?= $escaper->escapeUrl($image->getImageUrl()); ?>"
-                     width="<?= (int) $image->getWidth(); ?>"
-                     height="<?= (int) $image->getHeight(); ?>"
-                     alt="<?= $escaper->escapeHtmlAttr($product->getName()); ?>"
-                >
-                <p>
-                    <?= $escaper->escapeHtml($product->getName()) ?>
-                </p>
+                <template x-if="product.image">
+                    <img class="w-20 h-20 object-contain"
+                         :src="product.image"
+                         :alt="product.name"
+                         width="80"
+                         height="80"
+                    >
+                </template>
+                <p x-text="product.name"></p>
             </div>
             <!-- Buttons -->
             <div class="w-full flex flex-col sm:flex-row text-white gap-2 sm:gap-6 p-4">
@@ -65,23 +69,47 @@ $image = $block->getImage($product, 'product_page_image_small');
 </div>
 
 <script>
-    function initAddToCartPopup() {
+    function initAddToCartPopup(pageProduct) {
         return {
             open: false,
+            product: { name: '', image: '' },
 
             init() {
-                const form = document.getElementById('product_addtocart_form');
+                // Listen on the document so product forms rendered later (e.g. in sliders) are handled too
+                document.addEventListener('submit', (event) => {
+                    const form = event.target;
 
-                if (!form) return;
+                    // Only the product page form and the product item forms on listings
+                    if (!form.matches('#product_addtocart_form, form.product_addtocart_form')) return;
 
-                form.addEventListener('submit', (event) => {
-                    this.handleSubmit(event, form)
+                    // Another script has already taken care of this submit
+                    if (event.defaultPrevented) return;
+
+                    this.handleSubmit(event, form);
                 })
+            },
+
+            // Name and image of the product that belongs to the submitted form
+            getProductData(form) {
+                if (form.id === 'product_addtocart_form' && pageProduct) {
+                    return pageProduct;
+                }
+
+                const name = form.querySelector('.product-item-link');
+                const image = form.querySelector('.product-item-photo img');
+
+                return {
+                    name: name ? name.textContent.trim() : '',
+                    image: image ? (image.currentSrc || image.src) : ''
+                };
             },
 
             async handleSubmit(event, form) {
                 // Prevent the page from reloading
                 event.preventDefault();
+
+                // Listing forms use a %uenc% placeholder that Hyva only replaces on a normal submit
+                form.action = form.action.replace('%25uenc%25', hyva.getUenc());
 
                 // Use AJAX to add a product to the cart without refreshing the page
                 try {
@@ -102,6 +130,7 @@ $image = $block->getImage($product, 'product_page_image_small');
                     const result = await response.json();
 
                     // Follow Magento's default redirect behavior when a direct URL is returned
+                    // (e.g. a configurable product from the listing that still needs options)
                     if (result.backUrl) {
                         window.location.href = result.backUrl;
                         return;
@@ -112,7 +141,7 @@ $image = $block->getImage($product, 'product_page_image_small');
                         new Event('reload-customer-section-data')
                     );
 
-                    this.show();
+                    this.show(this.getProductData(form));
 
                 } catch (error) {
                     // Fall back to Magento's normal form of submission if AJAX fails
@@ -122,7 +151,8 @@ $image = $block->getImage($product, 'product_page_image_small');
             },
 
             // Open the pop-up
-            show() {
+            show(product) {
+                this.product = product;
                 this.open = true;
             },
 
@@ -133,4 +163,3 @@ $image = $block->getImage($product, 'product_page_image_small');
         }
     }
 </script>
-

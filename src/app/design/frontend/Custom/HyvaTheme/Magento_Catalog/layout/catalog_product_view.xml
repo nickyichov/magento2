@@ -2,10 +2,12 @@
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <body>
-        <referenceContainer name="content">
+        <!-- Replace the default pop-up with one that knows the current product -->
+        <referenceBlock name="add-to-cart-popup" remove="true"/>
+        <referenceContainer name="before.body.end">
             <block name="product.add-to-cart-popup"
                    class="Magento\Catalog\Block\Product\View"
-                   template="Magento_Catalog::product/view/add-to-cart-popup.phtml"/>
+                   template="Magento_Catalog::product/add-to-cart-popup.phtml"/>
         </referenceContainer>
     </body>
 </page>
