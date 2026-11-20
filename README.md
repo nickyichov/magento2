@@ -64,6 +64,22 @@ The store is now available at **https://m2.test/** and the admin panel at
 **https://m2.test/admin/**. The admin username and password are defined in
 `env/magento.env`.
 
+### Starting the store (already installed)
+
+1. Start Docker Desktop or OrbStack (or run `bin/docker-start`).
+2. From the project folder, start the containers:
+
+   ```bash
+   bin/start
+   ```
+
+3. Open **https://m2.test/** (admin: **https://m2.test/admin/**).
+
+`bin/start` keeps running at the end to watch files and clean the cache
+automatically. Leave it open in its own terminal tab, or press `Ctrl+C` to stop
+watching; the store keeps running either way. When working on the theme CSS,
+also run `bin/hyva-watch` in another tab. Run `bin/stop` when you are done.
+
 ### Activate the theme
 
 1. In the admin panel go to **Content → Design → Configuration**.
